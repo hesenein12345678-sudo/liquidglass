@@ -5,7 +5,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: unzip -q liquidglass.zip
+      - name: Unzip and find project
+        id: proj
+        run: |
+          unzip -q liquidglass.zip -d extracted
+          FILE=$(find extracted -name settings.gradle.kts -not -path "*/__MACOSX/*" | head -1)
+          if [ -z "$FILE" ]; then
+            echo "settings.gradle.kts not found. Zip contents:"
+            find extracted | head -50
+            exit 1
+          fi
+          echo "dir=$(dirname "$FILE")" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -14,8 +24,8 @@ jobs:
         with:
           gradle-version: 8.13
       - run: gradle assembleDebug
-        working-directory: LiquidGlassApp
+        working-directory: ${{ steps.proj.outputs.dir }}
       - uses: actions/upload-artifact@v4
         with:
           name: app-debug
-          path: LiquidGlassApp/app/build/outputs/apk/debug/app-debug.apk
+          path: ${{ steps.proj.outputs.dir }}/app/build/outputs/apk/debug/app-debug.apk
