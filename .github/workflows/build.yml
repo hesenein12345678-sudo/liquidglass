@@ -14,22 +14,19 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '17'
-        cache: 'gradle'
-
-    # (اختياري) إذا قمت برفع ملف مضغوط باسم project.zip في المستودع وتريد فك ضغطه تلقائياً قبل البناء:
     - name: Unzip project if zip exists
       run: |
         if [ -f "project.zip" ]; then
           echo "Unzipping project.zip..."
           unzip -o project.zip -d extracted_project
-          # نقل الملفات المرفوعة إلى المجلد الجذري للمستودع
           rsync -avq extracted_project/ ./
         fi
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v5
+      with:
+        distribution: 'temurin'
+        java-version: '17'
 
     - name: Grant execute permission for gradlew
       run: |
