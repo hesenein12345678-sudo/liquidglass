@@ -14,12 +14,21 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    - name: Unzip project if zip exists
+    - name: Find and Extract Zip Project
       run: |
-        if [ -f "project.zip" ]; then
-          echo "Unzipping project.zip..."
-          unzip -o project.zip -d extracted_project
-          rsync -avq extracted_project/ ./
+        # البحث عن أي ملف zip مرفوع في المستودع وفك ضغطه
+        ZIP_FILE=$(find . -maxdepth 2 -name "*.zip" | head -n 1)
+        if [ -n "$ZIP_FILE" ]; then
+          echo "Found zip file: $ZIP_FILE"
+          unzip -o "$ZIP_FILE" -d extracted_temp/
+          
+          # البحث عن المكان الذي يحتوي على settings.gradle أو build.gradle ونسخه للمجلد الرئيسي
+          BUILD_DIR=$(find extracted_temp/ -name "settings.gradle*" -o -name "build.gradle*" | head -n 1 | xargs dirname)
+          if [ -n "$BUILD_DIR" ]; then
+            echo "Moving project files from $BUILD_DIR to root..."
+            cp -r $BUILD_DIR/* ./
+          fi
+          rm -rf extracted_temp
         fi
 
     - name: Set up JDK 17
