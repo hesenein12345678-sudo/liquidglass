@@ -59,6 +59,11 @@ jobs:
           cd "$ROOT"
           test -f tools/fetch_backdrop_catalog_components.sh || { echo "ERROR: missing tools/fetch_backdrop_catalog_components.sh"; exit 1; }
           bash tools/fetch_backdrop_catalog_components.sh
+          DAMPED="app/src/main/java/com/kyant/backdrop/catalog/utils/DampedDragAnimation.kt"
+          test -s "$DAMPED"
+          sed -i 's/awaitFrame()/withFrameNanos { }/g' "$DAMPED"
+          grep -q '^import androidx.compose.runtime.withFrameNanos$' "$DAMPED" || sed -i '/^import androidx.compose.runtime.snapshotFlow$/a import androidx.compose.runtime.withFrameNanos' "$DAMPED"
+          if grep -q 'awaitFrame()' "$DAMPED"; then echo "ERROR: awaitFrame patch failed"; exit 1; fi
           test -s app/src/main/java/com/kyant/backdrop/catalog/components/LiquidBottomTabs.kt
           test -s app/src/main/java/com/kyant/backdrop/catalog/components/LiquidBottomTab.kt
           echo "Original component files are present."
