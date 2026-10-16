@@ -1,140 +1,197 @@
-name: Build Android project from ZIP
+
+name: Build Android Project from ZIP
 
 on:
   workflow_dispatch:
   push:
     paths:
-      - 'incoming/project.zip'
-      - '.github/workflows/build-uploaded-project.yml'
+      - "incoming/project.zip"
+      - ".github/workflows/build-uploaded-project.yml"
 
 permissions:
   contents: read
 
 concurrency:
-  group: uploaded-android-project-${{ github.ref }}
+  group: android-zip-build-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build:
+    name: Extract and Build APK
     runs-on: ubuntu-latest
     timeout-minutes: 45
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Verify and extract project ZIP
-        id: extract
+      - name: Install required tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y unzip zip
+
+      - name: Extract uploaded Android project
         shell: bash
         run: |
           set -euo pipefail
+
           ARCHIVE="incoming/project.zip"
-          if [[ ! -s "$ARCHIVE" ]]; then
-            echo "Missing incoming/project.zip. Upload the Android project ZIP to incoming/project.zip and run this workflow again." >&2
+          DEST="$RUNNER_TEMP/android-project"
+          UNPACK="$RUNNER_TEMP/unpacked-project"
+
+          if [ ! -s "$ARCHIVE" ]; then
+            echo "::error::Upload your project ZIP to incoming/project.zip"
             exit 1
           fi
-          mkdir -p "$RUNNER_TEMP/project-unpacked" "$RUNNER_TEMP/project-root"
-          # Reject ZIP path traversal entries before extraction.
+
           if unzip -Z1 "$ARCHIVE" | grep -E '(^/|(^|/)\.\.(/|$))'; then
-            echo "Unsafe ZIP entry detected; refusing to extract archive." >&2
+            echo "::error::Unsafe path found in ZIP archive."
             exit 1
           fi
-          unzip -q "$ARCHIVE" -d "$RUNNER_TEMP/project-unpacked"
-          # Find the nearest directory containing Gradle settings and app module build file.
+
+          mkdir -p "$UNPACK" "$DEST"
+          unzip -q "$ARCHIVE" -d "$UNPACK"
+
           ROOT=""
-          while IFS= read -r -d '' settings; do
-            candidate="$(dirname "$settings")"
-            if [[ -f "$candidate/gradlew" && ( -f "$candidate/app/build.gradle" || -f "$candidate/app/build.gradle.kts" || -f "$candidate/build.gradle" || -f "$candidate/build.gradle.kts" ) ]]; then
-              ROOT="$candidate"
+          while IFS= read -r -d '' file; do
+            DIR="$(dirname "$file")"
+            if [ -f "$DIR/gradlew" ] &&
+               { [ -f "$DIR/settings.gradle" ] ||
+                 [ -f "$DIR/settings.gradle.kts" ]; }; then
+              ROOT="$DIR"
               break
             fi
-          done < <(find "$RUNNER_TEMP/project-unpacked" -type f \( -name settings.gradle -o -name settings.gradle.kts \) -print0)
-          if [[ -z "$ROOT" ]]; then
-            echo "Could not find a Gradle Android project with settings.gradle(.kts) and gradlew in the ZIP." >&2
-            echo "The ZIP must include the Gradle Wrapper (gradlew and gradle/wrapper/gradle-wrapper.properties)." >&2
+          done < <(
+            find "$UNPACK" -type f \
+              \( -name settings.gradle -o -name settings.gradle.kts \) \
+              -print0
+          )
+
+          if [ -z "$ROOT" ]; then
+            echo "::error::No Gradle project with settings and gradlew found."
+            echo "Include gradlew, gradle/wrapper, and settings.gradle(.kts) in your ZIP."
             exit 1
           fi
-          cp -a "$ROOT"/. "$RUNNER_TEMP/project-root"/
-          echo "root=$RUNNER_TEMP/project-root" >> "$GITHUB_OUTPUT"
-          echo "Project root detected: relative path inside archive: ${ROOT#"$RUNNER_TEMP/project-unpacked"/}"
 
-      - name: Determine required Java version
+          cp -a "$ROOT"/. "$DEST"/
+          echo "PROJECT_DIR=$DEST" >> "$GITHUB_ENV"
+
+          echo "Project extracted successfully."
+          ls -la "$DEST"
+
+      - name: Detect Java version
         id: java
         shell: bash
         run: |
           set -euo pipefail
-          ROOT="$RUNNER_TEMP/project-root"
-          AGP=""
-          for f in "$ROOT/build.gradle" "$ROOT/build.gradle.kts" "$ROOT/settings.gradle" "$ROOT/settings.gradle.kts"; do
-            if [[ -f "$f" ]]; then
-              found="$(grep -Eo 'com\.android\.tools\.build:gradle:[0-9]+(\.[0-9]+)*|com\.android\.application[^\n]*version[ =]+"?[0-9]+(\.[0-9]+)*|com\.android\.application:[0-9]+(\.[0-9]+)*' "$f" | grep -Eo '[0-9]+(\.[0-9]+)+' | head -n1 || true)"
-              if [[ -n "$found" ]]; then AGP="$found"; break; fi
+          DIR="$PROJECT_DIR"
+          JAVA_VERSION=17
+
+          for FILE in \
+            "$DIR/gradle/libs.versions.toml" \
+            "$DIR/build.gradle" \
+            "$DIR/build.gradle.kts" \
+            "$DIR/settings.gradle" \
+            "$DIR/settings.gradle.kts"; do
+
+            [ -f "$FILE" ] || continue
+
+            if grep -Eq 'com\.android\.(application|library).*version.*9\.' "$FILE" ||
+               grep -Eq 'com\.android\.tools\.build:gradle:9\.' "$FILE"; then
+              JAVA_VERSION=17
             fi
           done
-          # Conservative default for modern Android projects. Older projects may need JDK 11 or 8.
-          JAVA=17
-          if [[ "$AGP" =~ ^(8|9)\. ]]; then JAVA=17; fi
-          if [[ "$AGP" =~ ^(7)\. ]]; then JAVA=11; fi
-          echo "version=$JAVA" >> "$GITHUB_OUTPUT"
-          echo "Detected AGP version: ${AGP:-unknown}; selecting JDK $JAVA. If the project requires another JDK, edit this workflow's JAVA value."
+
+          echo "version=$JAVA_VERSION" >> "$GITHUB_OUTPUT"
+          echo "Using JDK $JAVA_VERSION"
 
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: ${{ steps.java.outputs.version }}
-          cache: gradle
 
-      - name: Make Gradle Wrapper executable and validate files
-        working-directory: ${{ steps.extract.outputs.root }}
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Prepare Gradle Wrapper
         shell: bash
         run: |
           set -euo pipefail
-          chmod +x ./gradlew
-          test -s gradle/wrapper/gradle-wrapper.properties
-          grep -q 'distributionUrl=' gradle/wrapper/gradle-wrapper.properties
-          echo "Gradle Wrapper distribution:"
-          grep '^distributionUrl=' gradle/wrapper/gradle-wrapper.properties
+          cd "$PROJECT_DIR"
 
-      - name: Fetch Backdrop Catalog components if project provides a script
-        working-directory: ${{ steps.extract.outputs.root }}
+          if [ ! -s gradle/wrapper/gradle-wrapper.properties ]; then
+            echo "::error::Gradle Wrapper properties are missing."
+            exit 1
+          fi
+
+          chmod +x gradlew
+          grep 'distributionUrl=' gradle/wrapper/gradle-wrapper.properties
+
+      - name: Fetch Backdrop components if required
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -f tools/fetch_backdrop_catalog_components.sh ]]; then
+          cd "$PROJECT_DIR"
+
+          if [ -f tools/fetch_backdrop_catalog_components.sh ]; then
             chmod +x tools/fetch_backdrop_catalog_components.sh
             bash tools/fetch_backdrop_catalog_components.sh
           fi
 
-      - name: Apply optional Backdrop awaitFrame compatibility patch
-        working-directory: ${{ steps.extract.outputs.root }}
+      - name: Apply optional Backdrop compatibility fix
         shell: bash
         run: |
           set -euo pipefail
-          DAMPED="app/src/main/java/com/kyant/backdrop/catalog/utils/DampedDragAnimation.kt"
-          if [[ -f "$DAMPED" ]] && grep -q 'awaitFrame()' "$DAMPED"; then
-            sed -i 's/awaitFrame()/withFrameNanos { }/g' "$DAMPED"
-            if ! grep -q '^import androidx.compose.runtime.withFrameNanos$' "$DAMPED"; then
-              if grep -q '^import androidx.compose.runtime.snapshotFlow$' "$DAMPED"; then
-                sed -i '/^import androidx.compose.runtime.snapshotFlow$/a import androidx.compose.runtime.withFrameNanos' "$DAMPED"
-              else
-                sed -i '/^package /a\
-\nimport androidx.compose.runtime.withFrameNanos' "$DAMPED"
-              fi
-            fi
-            if grep -q 'awaitFrame()' "$DAMPED"; then echo "Backdrop compatibility patch failed" >&2; exit 1; fi
+          cd "$PROJECT_DIR"
+
+          FILE="app/src/main/java/com/kyant/backdrop/catalog/utils/DampedDragAnimation.kt"
+
+          if [ -f "$FILE" ] && grep -q 'awaitFrame()' "$FILE"; then
+            python3 - "$FILE" <<'PY'
+          import pathlib
+          import sys
+
+          p = pathlib.Path(sys.argv[1])
+          s = p.read_text()
+          s = s.replace("awaitFrame()", "withFrameNanos { }")
+
+          imp = "import androidx.compose.runtime.withFrameNanos"
+          if imp not in s:
+              lines = s.splitlines()
+              index = next(
+                  (i for i, line in enumerate(lines)
+                   if line.startswith("import ")),
+                  -1
+              )
+              if index >= 0:
+                  lines.insert(index, imp)
+              else:
+                  package_index = next(
+                      (i for i, line in enumerate(lines)
+                       if line.startswith("package ")),
+                      -1
+                  )
+                  lines.insert(package_index + 1, "")
+                  lines.insert(package_index + 2, imp)
+              s = "\n".join(lines) + "\n"
+
+          p.write_text(s)
+          PY
           fi
 
       - name: Build debug APK
-        working-directory: ${{ steps.extract.outputs.root }}
-        env:
-          GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx3g
-        run: ./gradlew --no-daemon --stacktrace --warning-mode all assembleDebug
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$PROJECT_DIR"
+          ./gradlew --no-daemon --stacktrace assembleDebug
 
-      - name: Upload APK files
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-debug-apk
           path: |
-            ${{ steps.extract.outputs.root }}/**/build/outputs/apk/**/*.apk
+            ${{ env.PROJECT_DIR }}/**/build/outputs/apk/**/*.apk
           if-no-files-found: error
           retention-days: 14
