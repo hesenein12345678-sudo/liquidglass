@@ -16,15 +16,16 @@ jobs:
             exit 1
           fi
           DIR=$(dirname "$FILE")
-          sed -i '/activity-compose/a\    implementation("androidx.compose.material:material-icons-core:1.7.8")' "$DIR/app/build.gradle.kts"
           echo "dir=$DIR" >> "$GITHUB_OUTPUT"
+          V=$(grep distributionUrl "$DIR/gradle/wrapper/gradle-wrapper.properties" | sed -E 's/.*gradle-([0-9.]+)-.*/\1/')
+          echo "gradle=$V" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: 8.13
+          gradle-version: ${{ steps.proj.outputs.gradle }}
       - run: gradle assembleDebug
         working-directory: ${{ steps.proj.outputs.dir }}
       - uses: actions/upload-artifact@v4
