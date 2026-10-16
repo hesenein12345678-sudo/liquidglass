@@ -11,11 +11,13 @@ jobs:
           unzip -q liquidglass.zip -d extracted
           FILE=$(find extracted -name settings.gradle.kts -not -path "*/__MACOSX/*" | head -1)
           if [ -z "$FILE" ]; then
-            echo "settings.gradle.kts not found. Zip contents:"
+            echo "settings.gradle.kts not found"
             find extracted | head -50
             exit 1
           fi
-          echo "dir=$(dirname "$FILE")" >> "$GITHUB_OUTPUT"
+          DIR=$(dirname "$FILE")
+          sed -i '/activity-compose/a\    implementation("androidx.compose.material:material-icons-core:1.7.8")' "$DIR/app/build.gradle.kts"
+          echo "dir=$DIR" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
