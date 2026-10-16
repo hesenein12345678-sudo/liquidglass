@@ -1,0 +1,79 @@
+name: Build Android APK
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Find and extract project archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f settings.gradle.kts ]]; then
+            echo "PROJECT_ROOT=." >> "$GITHUB_ENV"
+            exit 0
+          fi
+          mkdir -p extracted
+          if [[ -f liquidglass.zip ]]; then
+            unzip -oq liquidglass.zip -d extracted
+          fi
+          # Extract one or more nested project ZIPs if present.
+          while IFS= read -r -d '' archive; do
+            dest="${archive%.zip}-contents"
+            mkdir -p "$dest"
+            unzip -oq "$archive" -d "$dest"
+          done < <(find extracted -type f -name '*.zip' -print0)
+          SETTINGS="$(find extracted -type f -name settings.gradle.kts -print -quit)"
+          if [[ -z "$SETTINGS" ]]; then
+            echo "ERROR: Cannot find settings.gradle.kts. Upload the project ZIP as liquidglass.zip."
+            find . -maxdepth 5 -type f | sort | head -200
+            exit 1
+          fi
+          PROJECT_ROOT="$(dirname "$SETTINGS")"
+          echo "PROJECT_ROOT=$PROJECT_ROOT" >> "$GITHUB_ENV"
+          echo "Project root: $PROJECT_ROOT"
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.7.1'
+
+      - name: Import and verify original Backdrop Catalog components
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="${PROJECT_ROOT:-.}"
+          cd "$ROOT"
+          test -f tools/fetch_backdrop_catalog_components.sh || { echo "ERROR: missing tools/fetch_backdrop_catalog_components.sh"; exit 1; }
+          bash tools/fetch_backdrop_catalog_components.sh
+          test -s app/src/main/java/com/kyant/backdrop/catalog/components/LiquidBottomTabs.kt
+          test -s app/src/main/java/com/kyant/backdrop/catalog/components/LiquidBottomTab.kt
+          echo "Original component files are present."
+
+      - name: Build debug APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="${PROJECT_ROOT:-.}"
+          cd "$ROOT"
+          gradle --no-daemon assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: LumaTranslate-debug-apk
+          path: "${{ env.PROJECT_ROOT }}/app/build/outputs/apk/debug/app-debug.apk"
+          if-no-files-found: error
