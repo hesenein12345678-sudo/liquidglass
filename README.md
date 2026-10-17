@@ -12,3 +12,14 @@ The GitHub Actions workflow:
 7. uploads the APK as a workflow artifact.
 
 Do not upload another ZIP inside `project.zip`.
+
+
+## GitHub Actions layout
+
+The repository intentionally contains:
+- `project.zip` — the complete Android project.
+- `.github/workflows/build.yml` — the workflow.
+
+The workflow first extracts `project.zip`, then configures Gradle. This is important:
+`setup-java` is not asked to cache Gradle because the Gradle files are inside the ZIP
+and therefore are not present immediately after checkout.
