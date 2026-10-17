@@ -55,18 +55,23 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
+      
       - name: Accept Android SDK licenses
         shell: bash
         run: |
-          set -e
-          yes | sdkmanager --licenses
-          test ${PIPESTATUS[1]} -eq 0
+          set +e
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses
+          result=${PIPESTATUS[1]}
+          if [ "$result" -ne 0 ]; then
+            echo "Latest sdkmanager failed; trying installed sdkmanager"
+            yes | sdkmanager --licenses
+          fi
 
       - name: Install Android SDK packages
+        shell: bash
         run: |
-          sdkmanager --install \
-            "platforms;android-35" \
-            "build-tools;35.0.0"
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
 
       - name: Generate Gradle wrapper
         working-directory: ${{ env.PROJECT_DIR }}
