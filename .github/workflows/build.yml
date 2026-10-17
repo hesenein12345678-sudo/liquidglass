@@ -18,7 +18,15 @@ jobs:
         run: |
           f=$(find . -name settings.gradle.kts -not -path './.git/*' | head -n 1)
           if [ -z "$f" ]; then
-            echo "settings.gradle.kts not found in the repository. Upload the project files to GitHub."
+            # The project may have been uploaded as a .zip file: extract it automatically
+            for z in $(find . -iname '*.zip' -not -path './.git/*'); do
+              echo "Extracting $z"
+              unzip -oq "$z" -d ./_extracted_project || true
+            done
+            f=$(find . -name settings.gradle.kts -not -path './.git/*' | head -n 1)
+          fi
+          if [ -z "$f" ]; then
+            echo "settings.gradle.kts not found. Upload the project files (or the project zip) to the repository."
             exit 1
           fi
           echo "dir=$(dirname "$f")" >> "$GITHUB_OUTPUT"
