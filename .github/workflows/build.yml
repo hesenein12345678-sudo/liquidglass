@@ -2,68 +2,38 @@ name: Build APK
 
 on:
   push:
+    branches: [ main, master ]
   pull_request:
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # إذا رفعت المشروع كملف ImageResizer.zip يفك ضغطه، وإذا رفعته مفتوح يكمل عادي
-      - name: Unzip project (if zipped) and locate it
-        shell: bash
-        run: |
-          set -e
-          if [ -f "ImageResizer.zip" ]; then
-            echo "Found ImageResizer.zip -> extracting"
-            unzip -q -o ImageResizer.zip -d _unzipped
-          fi
-          SETTINGS=$(find . -name "settings.gradle.kts" -not -path "*/node_modules/*" -not -path "*/.git/*" | head -n 1)
-          if [ -z "$SETTINGS" ]; then
-            echo "settings.gradle.kts not found!"; exit 1
-          fi
-          DIR=$(dirname "$SETTINGS")
-          echo "PROJECT_DIR=$DIR" >> "$GITHUB_ENV"
-          echo "Project directory: $DIR"
-          ls -la "$DIR"
-
-      - name: Set up JDK 21
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 21
+          java-version: '17'
 
-      # الـ Android SDK مثبّت مسبقاً على الـ runner، نكتفي بقبول التراخيص (بدون sdkmanager)
-      - name: Accept Android SDK licenses
-        shell: bash
-        run: |
-          SDK="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
-          sudo chown -R "$USER" "$SDK" || true
-          mkdir -p "$SDK/licenses"
-          printf "\n24333f8a63b6825ea9c5514f83c2829b004d1fee\n8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb78af6dfcb131a6481e\n84831b9409646a918e30573bab4c9c91346d8abd\n" > "$SDK/licenses/android-sdk-license"
-          printf "\n84831b9409646a918e30573bab4c9c91346d8abd\n" > "$SDK/licenses/android-sdk-preview-license"
-          echo "sdk.dir=$SDK" > /tmp/sdkdir.txt
-          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
-          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
 
-      # المشروع ما فيه gradlew، فنثبّت نفس نسخة Gradle المطلوبة (9.7.1) مباشرة
-      - name: Set up Gradle 9.7.1
+      - name: Set up Gradle 8.13
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: 9.7.1
+          gradle-version: '8.13'
 
-      - name: Build debug + release APK
-        working-directory: ${{ env.PROJECT_DIR }}
-        run: gradle :app:assembleDebug :app:assembleRelease --no-daemon --stacktrace
+      - name: Build debug APK
+        run: gradle assembleDebug --stacktrace --no-daemon
 
-      - name: Upload APKs
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: ImageResizer-apk
-          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/**/*.apk
-          if-no-files-found: error
+          name: LiquidPlayer-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
