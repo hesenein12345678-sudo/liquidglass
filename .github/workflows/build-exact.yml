@@ -19,22 +19,34 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Setup Gradle 9.1
+      - name: Setup Gradle 9.7.1
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "9.1"
+          gradle-version: "9.7.1"
+
+      - name: Verify archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s BackdropCatalogExact.zip
 
       - name: Unzip project
+        shell: bash
         run: |
-          set -euxo pipefail
-          test -f BackdropCatalogExact.zip
+          set -euo pipefail
           rm -rf project
           mkdir project
           unzip -q BackdropCatalogExact.zip -d project
+          test -f project/settings.gradle.kts
+          test -f project/app/build.gradle.kts
 
       - name: Build debug APK
         working-directory: project
-        run: gradle --no-daemon :app:assembleDebug
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --version
+          gradle --no-daemon --stacktrace :app:assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
