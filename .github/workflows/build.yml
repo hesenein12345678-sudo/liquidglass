@@ -1,70 +1,59 @@
-name: Build Backdrop Catalog APK
+name: Build APK
 
 on:
   push:
-    branches: ["**"]
+    branches: [ main, master ]
   pull_request:
-
-permissions:
-  contents: read
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Locate Gradle project
+        id: loc
+        run: |
+          f=$(find . -name settings.gradle.kts -not -path './.git/*' | head -n 1)
+          if [ -z "$f" ]; then
+            # The project may have been uploaded as a .zip file: extract it automatically
+            for z in $(find . -iname '*.zip' -not -path './.git/*'); do
+              echo "Extracting $z"
+              unzip -oq "$z" -d ./_extracted_project || true
+            done
+            f=$(find . -name settings.gradle.kts -not -path './.git/*' | head -n 1)
+          fi
+          if [ -z "$f" ]; then
+            echo "settings.gradle.kts not found. Upload the project files (or the project zip) to the repository."
+            exit 1
+          fi
+          echo "dir=$(dirname "$f")" >> "$GITHUB_OUTPUT"
+          echo "Project directory: $(dirname "$f")"
+
       - name: Set up JDK 17
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
-          # IMPORTANT: no Gradle cache here.
-          # The Android project is intentionally stored inside project.zip.
+          java-version: '17'
 
-      - name: Verify project archive
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -s project.zip
-          unzip -tq project.zip
-
-      - name: Extract Android project
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -rf android-project
-          mkdir -p android-project
-          unzip -q project.zip -d android-project
-          test -f android-project/settings.gradle.kts
-          test -f android-project/app/build.gradle.kts
-          test -f android-project/gradle/wrapper/gradle-wrapper.properties
-
-      - name: Set up Gradle 9.7.1
-        uses: gradle/actions/setup-gradle@v5
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
         with:
-          gradle-version: "9.7.1"
+          packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
+
+      - name: Set up Gradle 8.13
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
 
       - name: Build debug APK
-        shell: bash
-        working-directory: android-project
-        run: |
-          set -euo pipefail
-          gradle --version
-          gradle --no-daemon --stacktrace --console=plain :app:assembleDebug
-
-      - name: Verify APK
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -s android-project/app/build/outputs/apk/debug/app-debug.apk
-          ls -lh android-project/app/build/outputs/apk/debug/app-debug.apk
+        working-directory: ${{ steps.loc.outputs.dir }}
+        run: gradle assembleDebug --stacktrace --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: backdrop-catalog-debug
-          path: android-project/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
+          name: LiquidPlayer-debug-apk
+          path: ${{ steps.loc.outputs.dir }}/app/build/outputs/apk/debug/*.apk
