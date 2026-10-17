@@ -1,4 +1,4 @@
-name: Build APK
+name: Build APK from ZIP
 
 on:
   push:
@@ -10,6 +10,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Find and unzip the project
+        run: |
+          ZIP=$(find . -maxdepth 3 -iname "*.zip" -not -path "./.git/*" | head -n 1)
+          if [ -z "$ZIP" ]; then
+            echo "::error::No .zip file found in the repository"
+            exit 1
+          fi
+          echo "Found zip: $ZIP"
+          rm -rf _project
+          mkdir _project
+          unzip -q "$ZIP" -d _project
+
+          # the Gradle project root = the shallowest folder that has settings.gradle(.kts)
+          SETTINGS=$(find _project \( -name "settings.gradle.kts" -o -name "settings.gradle" \) \
+            | awk '{ print length($0) " " $0 }' | sort -n | head -n 1 | cut -d' ' -f2-)
+          if [ -z "$SETTINGS" ]; then
+            echo "::error::No settings.gradle(.kts) found inside the zip"
+            exit 1
+          fi
+          PROJECT_DIR=$(dirname "$SETTINGS")
+          echo "Project dir: $PROJECT_DIR"
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
 
       - uses: actions/setup-java@v4
         with:
@@ -23,9 +46,16 @@ jobs:
           gradle-version: '9.5.0'
 
       - name: Build debug APK
-        run: gradle :app:assembleDebug --no-daemon --stacktrace
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          if [ -f gradlew ]; then
+            chmod +x gradlew
+            ./gradlew assembleDebug --no-daemon --stacktrace
+          else
+            gradle assembleDebug --no-daemon --stacktrace
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
-          name: GlassPlayer-APK
-          path: app/build/outputs/apk/debug/*.apk
+          name: App-APK
+          path: ${{ env.PROJECT_DIR }}/**/build/outputs/apk/debug/*.apk
