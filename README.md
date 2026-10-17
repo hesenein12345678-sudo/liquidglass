@@ -1,25 +1,30 @@
-# Backdrop Catalog — GitHub Actions bundle
+# Liquid Player
 
-This repository intentionally keeps the Android source in `project.zip`.
-The GitHub Actions workflow:
+مشغل موسيقى للأندرويد بتصميم Liquid Glass، مبني بمكتبة [Backdrop](https://github.com/Kyant0/AndroidLiquidGlass).
 
-1. checks out the repository;
-2. installs JDK 17;
-3. installs Gradle 9.7.1;
-4. extracts `project.zip` into `android-project/`;
-5. builds `:app:assembleDebug`;
-6. verifies the APK exists; and
-7. uploads the APK as a workflow artifact.
+## المميزات
+- شريط سفلي زجاجي بـ 3 تبويبات: Home وLibrary وSettings
+- مشغل صغير ينفتح لمشغل كبير بأنيميشن
+- تشغيل الأغاني الموجودة على الجهاز
+- بحث وتنزيل الأغاني والقصائد من الإنترنت (Internet Archive)
+- أكثر من 20 لون للأزرار، وألوان تتكيّف مع غلاف الأغنية
+- ثيم داكن أو فاتح، وأيقونات متعددة للتطبيق
+- تحكم بضبابية الشريط السفلي وانكساره وشفافيته ولونه
+- كلمات الأغاني مع إمكانية تعديلها
+- وضع للأجهزة الضعيفة (تطفئ الـ Liquid Glass)
 
-Do not upload another ZIP inside `project.zip`.
+## المتطلبات
+- أندرويد 10 أو أحدث
+- أندرويد 13 أو أحدث لتأثير الانكسار الكامل، وأندرويد 12 للضبابية
 
+## البناء
+1. ارفع ملفات المشروع للريبو
+2. ضع ملف `build.yml` بالمسار `.github/workflows/build.yml`
+3. من تبويب **Actions** شغّل **Build APK**
+4. نزّل الـ APK من **Artifacts**
 
-## GitHub Actions layout
+للبناء محلياً: افتح المشروع بـ Android Studio (JDK 17) أو شغّل `gradle assembleDebug`.
 
-The repository intentionally contains:
-- `project.zip` — the complete Android project.
-- `.github/workflows/build.yml` — the workflow.
-
-The workflow first extracts `project.zip`, then configures Gradle. This is important:
-`setup-java` is not asked to cache Gradle because the Gradle files are inside the ZIP
-and therefore are not present immediately after checkout.
+## التواصل
+- Telegram: [@xezn9](https://t.me/xezn9)
+- TikTok: [@xezn99](https://www.tiktok.com/@xezn99)
