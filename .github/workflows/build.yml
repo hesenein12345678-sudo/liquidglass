@@ -37,8 +37,14 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Accept Android SDK licenses (use preinstalled SDK)
+        shell: bash
+        run: |
+          set +o pipefail
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          [ -x "$SDKM" ] || SDKM=$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager | head -n 1)
+          yes | "$SDKM" --licenses > /dev/null || true
+          echo "Licenses accepted"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
