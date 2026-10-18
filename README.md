@@ -1,9 +1,71 @@
-# NoAdaForApk
+# LinkSkip ⏭️
 
-Clean Android APK resolver/downloader with an XOS-inspired interface.
+تطبيق أندرويد بتصميم **iOS 16** (عناوين كبيرة، بطاقات مدوّرة، أزرار وسويتشات iOS، وضع داكن).
+تعطيه رابط موقع فيه إعلانات وانتظار، وهو يتخطّاها ويطلّع لك ملف **APK** جاهز للتثبيت.
 
-## GitHub Actions
+## كيف يشتغل
 
-The workflow extracts `NoAdaForApk.zip`, uses JDK 17, Gradle 8.2 and Android Gradle Plugin 8.2.2, builds the debug APK, verifies that it exists, and uploads it as a GitHub Actions artifact.
+1. تلصق الرابط (أو تسوي **مشاركة** للرابط من المتصفح إلى LinkSkip).
+2. التطبيق يفتح الصفحة داخل متصفح مدمج ويقوم بـ:
+   - **حظر الإعلانات** والنوافذ المنبثقة وإزالة الطبقات الشفافة التي تلتقط الضغطات.
+   - **تسريع عدّادات الانتظار** (×5 أو ×12، من الإعدادات).
+   - **ضغط الأزرار تلقائياً**: Continue / Get Link / Skip / متابعة / تخطي… وأزرار شائعة ثانية.
+   - **التقاط رابط الـ APK** وتحميله مباشرة بـ DownloadManager.
+3. بعد التحميل تطلع لك شاشة التثبيت (أو زر «تثبيت» بالسجل).
 
-The app has no advertising SDK and no third-party runtime dependencies.
+## الميزات
+
+- تصميم iOS 16: Large Title، Grouped Lists، Segmented Control، Tab Bar، دعم Dark Mode، واجهة RTL.
+- استقبال الروابط من زر المشاركة.
+- سجل بالتحميلات مع نسبة التقدّم.
+- إعدادات: ضغط تلقائي، حظر الإعلانات، سرعة العدّاد، فتح التثبيت تلقائياً.
+
+## البناء على GitHub (بدون Android Studio)
+
+1. سوّي مستودع جديد على GitHub.
+2. ارفع هذي الملفات بجذر المستودع:
+   - `LinkSkip.zip` (ملف المشروع، لا تفكّه)
+   - `.github/workflows/build.yml`
+   - `README.md`
+3. افتح تبويب **Actions**. الـ workflow يفكّ الـ zip ويبني المشروع تلقائياً (أو شغّله يدوياً من **Run workflow**).
+4. بعد ما ينتهي (5–10 دقائق تقريباً) تلقى الـ APK بمكانين:
+   - **Releases** بالمستودع (`LinkSkip.apk`).
+   - **Actions ← آخر تشغيل ← Artifacts** (`LinkSkip-apk`).
+
+> الـ APK موقّع بمفتاح debug حتى يتثبّت مباشرة. إذا تريد نسخة بتوقيعك الخاص، بدّل `signingConfig` داخل `app/build.gradle.kts`.
+
+## الاستخدام
+
+1. ثبّت الـ APK وافتح التطبيق.
+2. الصق الرابط واضغط **ابدأ التخطّي**.
+3. إذا ظهر كابتشا، حلّه داخل المتصفح المدمج، والتطبيق يكمل.
+4. أول مرة تثبّت APK من التطبيق، النظام يطلب منك تفعيل **السماح بالتثبيت** لـ LinkSkip.
+
+## حدود لازم تعرفها
+
+- ما في أداة تتخطى **أي** موقع مهما كان بشكل مضمون. المواقع اللي تتحقق من الوقت على السيرفر أو تفرض كابتشا ما تنتخطى تلقائياً. لهذا التطبيق يخلّيك تشوف الصفحة وتتدخّل بالكابتشا.
+- بعض المواقع تغيّر تصميمها باستمرار، فقد يحتاج الضغط التلقائي لتحديث قائمة الأزرار داخل `Engine.kt`.
+- الروابط من نوع `blob:` أو `data:` ما يقدر DownloadManager يحمّلها.
+- ثبّت فقط تطبيقات من مصادر تثق بها وتملك حق استخدامها، واحترم شروط استخدام المواقع.
+
+## هيكل المشروع
+
+```
+LinkSkip/
+├── settings.gradle.kts
+├── build.gradle.kts
+├── gradle.properties
+└── app/
+    ├── build.gradle.kts
+    └── src/main/
+        ├── AndroidManifest.xml
+        ├── java/app/linkskip/
+        │   ├── MainActivity.kt   # نقطة الدخول + استقبال المشاركة
+        │   ├── Engine.kt         # WebView + سكربتات التخطي + التحميل
+        │   └── Ui.kt             # واجهة Compose بستايل iOS 16
+        └── res/                  # الأيقونة والثيم والألوان
+```
+
+## التقنيات
+
+Kotlin • Jetpack Compose • WebView + androidx.webkit • DownloadManager • Gradle 8.9 / AGP 8.5 • minSdk 29
