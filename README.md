@@ -1,30 +1,9 @@
-# Liquid Player
+# NoAdaForApk
 
-مشغل موسيقى للأندرويد بتصميم Liquid Glass، مبني بمكتبة [Backdrop](https://github.com/Kyant0/AndroidLiquidGlass).
+Clean Android APK resolver/downloader with an XOS-inspired interface.
 
-## المميزات
-- شريط سفلي زجاجي بـ 3 تبويبات: Home وLibrary وSettings
-- مشغل صغير ينفتح لمشغل كبير بأنيميشن
-- تشغيل الأغاني الموجودة على الجهاز
-- بحث وتنزيل الأغاني والقصائد من الإنترنت (Internet Archive)
-- أكثر من 20 لون للأزرار، وألوان تتكيّف مع غلاف الأغنية
-- ثيم داكن أو فاتح، وأيقونات متعددة للتطبيق
-- تحكم بضبابية الشريط السفلي وانكساره وشفافيته ولونه
-- كلمات الأغاني مع إمكانية تعديلها
-- وضع للأجهزة الضعيفة (تطفئ الـ Liquid Glass)
+## GitHub Actions
 
-## المتطلبات
-- أندرويد 10 أو أحدث
-- أندرويد 13 أو أحدث لتأثير الانكسار الكامل، وأندرويد 12 للضبابية
+The workflow extracts `NoAdaForApk.zip`, uses JDK 17, Gradle 8.2 and Android Gradle Plugin 8.2.2, builds the debug APK, verifies that it exists, and uploads it as a GitHub Actions artifact.
 
-## البناء
-1. ارفع ملفات المشروع للريبو
-2. ضع ملف `build.yml` بالمسار `.github/workflows/build.yml`
-3. من تبويب **Actions** شغّل **Build APK**
-4. نزّل الـ APK من **Artifacts**
-
-للبناء محلياً: افتح المشروع بـ Android Studio (JDK 17) أو شغّل `gradle assembleDebug`.
-
-## التواصل
-- Telegram: [@xezn9](https://t.me/xezn9)
-- TikTok: [@xezn99](https://www.tiktok.com/@xezn99)
+The app has no advertising SDK and no third-party runtime dependencies.
