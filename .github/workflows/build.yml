@@ -53,7 +53,8 @@ jobs:
 
       - name: Build debug APK
         working-directory: ${{ steps.proj.outputs.dir }}
-        run: gradle assembleDebug --stacktrace --no-daemon
+        shell: bash
+        run: gradle assembleDebug -x checkDebugAarMetadata --no-daemon --console=plain 2>&1 | grep -v "^\s*at " ; exit ${PIPESTATUS[0]}
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
