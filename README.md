@@ -1,57 +1,26 @@
-# LinkSkip ⏭️
+# Liquid Glass 🫧
 
-تطبيق أندرويد بتصميم **iOS 16** (عناوين كبيرة، بطاقات مدوّرة، أزرار وسويتشات iOS، وضع داكن).
-تعطيه رابط موقع فيه إعلانات وانتظار، وهو يتخطّاها ويطلّع لك ملف **APK** جاهز للتثبيت.
+تطبيق أندرويد (Jetpack Compose) يعرض تصميم **Liquid Glass** بالكامل باستخدام مكتبة
+[**Backdrop**](https://github.com/Kyant0/AndroidLiquidGlass) من Kyant0.
 
-## كيف يشتغل
+An Android app built with Jetpack Compose that showcases the **Liquid Glass** look using the Backdrop library.
 
-1. تلصق الرابط (أو تسوي **مشاركة** للرابط من المتصفح إلى LinkSkip).
-2. التطبيق يفتح الصفحة داخل متصفح مدمج ويقوم بـ:
-   - **حظر الإعلانات** والنوافذ المنبثقة وإزالة الطبقات الشفافة التي تلتقط الضغطات.
-   - **تسريع عدّادات الانتظار** (×5 أو ×12، من الإعدادات).
-   - **ضغط الأزرار تلقائياً**: Continue / Get Link / Skip / متابعة / تخطي… وأزرار شائعة ثانية.
-   - **التقاط رابط الـ APK** وتحميله مباشرة بـ DownloadManager.
-3. بعد التحميل تطلع لك شاشة التثبيت (أو زر «تثبيت» بالسجل).
+## المميزات / Features
 
-## الميزات
+- **شريط سفلي زجاجي (Bottom Tabs)** مثل الموجود في Backdrop Catalog: كبسولة زجاجية + مؤشر زجاجي قابل للسحب ويتمدد عند اللمس.
+- **Home**: عرض لعناصر زجاجية (أزرار، Switch، Slider، كروت) فوق خلفية متحركة.
+- **About**: شرح عن التطبيق + زر تيليجرام (`@xezn9`) وزر تيك توك (`@xezn99`).
+- **Profile** بأسلوب تيك توك:
+  - صورة ملف شخصي وبانر يتلاشى تدريجياً من الأسفل فقط
+  - الاسم واسم المستخدم
+  - قصة (نص + صورة) تختفي تلقائياً بعد 24 ساعة
+  - كل شيء قابل للتخصيص (صورة، بانر، اسم، مستخدم، قصة)
+- كل زر وعنصر قابل للضغط له حركة Spring ناعمة بأسلوب Apple، وانزلاق بين الصفحات.
 
-- تصميم iOS 16: Large Title، Grouped Lists، Segmented Control، Tab Bar، دعم Dark Mode، واجهة RTL.
-- استقبال الروابط من زر المشاركة.
-- سجل بالتحميلات مع نسبة التقدّم.
-- إعدادات: ضغط تلقائي، حظر الإعلانات، سرعة العدّاد، فتح التثبيت تلقائياً.
-
-## البناء على GitHub (بدون Android Studio)
-
-1. سوّي مستودع جديد على GitHub.
-2. ارفع هذي الملفات بجذر المستودع:
-   - `LinkSkip.zip` (ملف المشروع، لا تفكّه)
-   - `.github/workflows/build.yml`
-   - `README.md`
-3. افتح تبويب **Actions**. الـ workflow يفكّ الـ zip ويبني المشروع تلقائياً (أو شغّله يدوياً من **Run workflow**).
-4. بعد ما ينتهي (5–10 دقائق تقريباً) تلقى الـ APK بمكانين:
-   - **Releases** بالمستودع (`LinkSkip.apk`).
-   - **Actions ← آخر تشغيل ← Artifacts** (`LinkSkip-apk`).
-
-> الـ APK موقّع بمفتاح debug حتى يتثبّت مباشرة. إذا تريد نسخة بتوقيعك الخاص، بدّل `signingConfig` داخل `app/build.gradle.kts`.
-
-## الاستخدام
-
-1. ثبّت الـ APK وافتح التطبيق.
-2. الصق الرابط واضغط **ابدأ التخطّي**.
-3. إذا ظهر كابتشا، حلّه داخل المتصفح المدمج، والتطبيق يكمل.
-4. أول مرة تثبّت APK من التطبيق، النظام يطلب منك تفعيل **السماح بالتثبيت** لـ LinkSkip.
-
-## حدود لازم تعرفها
-
-- ما في أداة تتخطى **أي** موقع مهما كان بشكل مضمون. المواقع اللي تتحقق من الوقت على السيرفر أو تفرض كابتشا ما تنتخطى تلقائياً. لهذا التطبيق يخلّيك تشوف الصفحة وتتدخّل بالكابتشا.
-- بعض المواقع تغيّر تصميمها باستمرار، فقد يحتاج الضغط التلقائي لتحديث قائمة الأزرار داخل `Engine.kt`.
-- الروابط من نوع `blob:` أو `data:` ما يقدر DownloadManager يحمّلها.
-- ثبّت فقط تطبيقات من مصادر تثق بها وتملك حق استخدامها، واحترم شروط استخدام المواقع.
-
-## هيكل المشروع
+## هيكل المشروع / Structure
 
 ```
-LinkSkip/
+LiquidGlass/
 ├── settings.gradle.kts
 ├── build.gradle.kts
 ├── gradle.properties
@@ -59,13 +28,45 @@ LinkSkip/
     ├── build.gradle.kts
     └── src/main/
         ├── AndroidManifest.xml
-        ├── java/app/linkskip/
-        │   ├── MainActivity.kt   # نقطة الدخول + استقبال المشاركة
-        │   ├── Engine.kt         # WebView + سكربتات التخطي + التحميل
-        │   └── Ui.kt             # واجهة Compose بستايل iOS 16
-        └── res/                  # الأيقونة والثيم والألوان
+        ├── res/...
+        └── java/com/xezn/liquidglass/
+            ├── MainActivity.kt
+            ├── Data.kt              ← بيانات البروفايل والتخزين
+            └── ui/
+                ├── App.kt           ← الجذر + التنقل
+                ├── Tabs.kt          ← الشريط السفلي Liquid Glass
+                ├── Components.kt    ← الأزرار والكروت (glass / bouncyClick)
+                ├── Screens.kt       ← Home / About / Profile
+                └── Overlays.kt      ← نوافذ التعديل وعارض القصة
 ```
 
-## التقنيات
+## البناء على GitHub (بدون جهازك) / Build on GitHub
 
-Kotlin • Jetpack Compose • WebView + androidx.webkit • DownloadManager • Gradle 8.9 / AGP 8.5 • minSdk 29
+1. أنشئ Repository جديد على GitHub.
+2. ارفع هذه الملفات في **جذر** الـ Repository:
+   - ملف المشروع `LiquidGlass.zip` (كما هو، لا تفك ضغطه)
+   - `README.md`
+   - `build.yml` داخل المجلد `.github/workflows/` (أي المسار الكامل `.github/workflows/build.yml`)
+3. بعد الرفع يبدأ البناء تلقائياً (أو من تبويب **Actions** ← **Build Android APK** ← **Run workflow**).
+4. الـ Workflow يفك ضغط الـ zip داخل GitHub، يجهز JDK 17 و Android SDK و Gradle، ثم يبني `assembleDebug`.
+5. بعد النجاح افتح التشغيل واضغط على **LiquidGlass-debug-apk** في قسم Artifacts لتحميل الـ APK وتثبيته.
+
+## البناء محلياً / Build locally
+
+افتح مجلد المشروع في Android Studio (Narwhal أو أحدث) واضغط Run. أو:
+
+```bash
+gradle assembleDebug
+```
+
+## ملاحظات / Notes
+
+- تأثير العدسة (Lens/Refraction) يحتاج **Android 13+** (API 33)؛ في الإصدارات الأقدم يظهر التمويه فقط.
+- إصدار المكتبة محدد في `app/build.gradle.kts`:
+  `io.github.kyant0:backdrop:1.0.6` — يمكنك تغييره لأحدث إصدار من Maven Central.
+- بيانات الملف الشخصي تُحفظ محلياً على الجهاز فقط.
+
+## الحسابات / Contact
+
+- Telegram: https://t.me/xezn9
+- TikTok: https://www.tiktok.com/@xezn99
