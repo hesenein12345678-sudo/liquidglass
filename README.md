@@ -63,7 +63,7 @@ gradle assembleDebug
 
 - تأثير العدسة (Lens/Refraction) يحتاج **Android 13+** (API 33)؛ في الإصدارات الأقدم يظهر التمويه فقط.
 - إصدار المكتبة محدد في `app/build.gradle.kts`:
-  `io.github.kyant0:backdrop:1.0.6` — يمكنك تغييره لأحدث إصدار من Maven Central.
+  `io.github.kyant0:backdrop:2.0.0` — يمكنك تغييره لأحدث إصدار من Maven Central.
 - بيانات الملف الشخصي تُحفظ محلياً على الجهاز فقط.
 
 ## الحسابات / Contact
