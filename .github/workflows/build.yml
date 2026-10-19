@@ -47,7 +47,7 @@ jobs:
           set +o pipefail
           SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           yes | "$SDKM" --licenses > /dev/null 2>&1 || true
-          yes | "$SDKM" "platforms;android-36" "build-tools;36.0.0" > /dev/null 2>&1 || true
+          yes | "$SDKM" "platforms;android-37" "platforms;android-36" "build-tools;36.0.0" > /dev/null 2>&1 || true
           exit 0
 
       - name: Set up Gradle
@@ -58,7 +58,19 @@ jobs:
       - name: Build debug APK
         run: |
           cd "$PROJECT_DIR"
-          gradle assembleDebug --no-daemon --stacktrace
+          set -o pipefail
+          gradle assembleDebug --no-daemon --stacktrace --console=plain 2>&1 | tee "$GITHUB_WORKSPACE/build.log"
+
+      - name: Show the real error (short)
+        if: failure()
+        run: |
+          {
+            echo "### Build error"
+            echo '```'
+            grep -A15 "What went wrong" "$GITHUB_WORKSPACE/build.log" | head -n 40
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          grep -A6 "What went wrong" "$GITHUB_WORKSPACE/build.log" | head -n 10 | while read -r l; do echo "::error::$l"; done
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
